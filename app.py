@@ -18,20 +18,26 @@ def get_iam_token():
 # Function to query Granite
 def query_granite(prompt):
     token = get_iam_token()
-    url = "https://eu-de.ml.cloud.ibm.com/ml/v1/text-generation?version=2024-04-01"
+    url = "https://eu-de.ml.cloud.ibm.com/v2/inference"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "ML-Instance-ID": project_id
+        "Content-Type": "application/json"
     }
     payload = {
         "model_id": model_id,
         "input": prompt,
-        "parameters": {"max_new_tokens": 300}
+        "parameters": {
+            "decoding_method": "greedy",
+            "max_new_tokens": 300
+        },
+        "project_id": project_id
     }
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
-        return response.json()["results"][0]["generated_text"]
+        try:
+            return response.json()["results"][0]["generated_text"]
+        except (KeyError, IndexError):
+            return "⚠️ Response received but no text was found."
     else:
         return f"❌ Error: {response.status_code} - {response.text}"
 
