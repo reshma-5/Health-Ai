@@ -18,7 +18,7 @@ def get_iam_token():
 # Function to query Granite
 def query_granite(prompt):
     token = get_iam_token()
-    url = "https://eu-de.ml.cloud.ibm.com/v2/inference"
+    url = "https://us-south.ml.cloud.ibm.com/v2/inference"  # ✅ your region is us-south (Dallas)
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -30,16 +30,19 @@ def query_granite(prompt):
             "decoding_method": "greedy",
             "max_new_tokens": 300
         },
-        "project_id": project_id
+        "project_id": project_id 
     }
+
     response = requests.post(url, headers=headers, json=payload)
+
     if response.status_code == 200:
         try:
             return response.json()["results"][0]["generated_text"]
         except (KeyError, IndexError):
-            return "⚠️ Response received but no text was found."
+            return "⚠️ Model responded but no text was returned."
     else:
         return f"❌ Error: {response.status_code} - {response.text}"
+
 
 # Streamlit UI
 st.set_page_config(page_title="HealthAI", page_icon="🩺", layout="centered")
