@@ -4,7 +4,7 @@ import requests
 # WatsonX credentials
 api_key = st.secrets["WATSONX_API_KEY"]
 project_id = st.secrets["WATSONX_PROJECT_ID"]
-model_id = "granite-3b-instruct-v1"
+model_id = "ibm-granite/granite-3.3-2b-instruct"
 
 # IAM token function
 @st.cache_resource
