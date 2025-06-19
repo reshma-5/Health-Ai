@@ -1,12 +1,13 @@
 import streamlit as st
 import requests
 
-# WatsonX credentials
+# WatsonX credentials (stored in Streamlit secrets)
 api_key = st.secrets["WATSONX_API_KEY"]
 project_id = st.secrets["WATSONX_PROJECT_ID"]
-model_id = "granite-3b-instruct-v1"
+model_id = "Granite-13b-instruct-v2"  
+region = "us-south"  # ✅ Your region (Dallas)
 
-# IAM token function
+# Get IAM token from IBM Cloud
 @st.cache_resource
 def get_iam_token():
     url = "https://iam.cloud.ibm.com/identity/token"
@@ -15,22 +16,25 @@ def get_iam_token():
     response = requests.post(url, headers=headers, data=data)
     return response.json()["access_token"]
 
-# Function to query Granite
+# Query Granite model via WatsonX
 def query_granite(prompt):
     token = get_iam_token()
-    url = "https://us-south.ml.cloud.ibm.com/v2/inference"  # ✅ your region is us-south (Dallas)
+    url = f"https://{region}.ml.cloud.ibm.com/ml/v1/text-generation?version=2024-05-01"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
     payload = {
         "model_id": model_id,
+        "project_id": project_id,
         "input": prompt,
         "parameters": {
-            "decoding_method": "greedy",
-            "max_new_tokens": 300
-        },
-        "project_id": project_id 
+            "decoding_method": "sample",
+            "max_new_tokens": 300,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95
+        }
     }
 
     response = requests.post(url, headers=headers, json=payload)
@@ -39,10 +43,9 @@ def query_granite(prompt):
         try:
             return response.json()["results"][0]["generated_text"]
         except (KeyError, IndexError):
-            return "⚠️ Model responded but no text was returned."
+            return "⚠️ Model responded, but no generated text was found."
     else:
         return f"❌ Error: {response.status_code} - {response.text}"
-
 
 # Streamlit UI
 st.set_page_config(page_title="HealthAI", page_icon="🩺", layout="centered")
@@ -51,7 +54,7 @@ page = st.sidebar.radio("Go to", ["🏠 Home", "🗣️ Patient Chat", "🔍 Dis
 
 if page == "🏠 Home":
     st.title("🏠 Welcome to HealthAI")
-    st.markdown("Powered by IBM WatsonX + Granite model")
+    st.markdown("🔹 Ask medical questions\n🔹 Predict diseases\n🔹 Get treatment plans\n\nPowered by **IBM watsonx.ai + Granite**.")
 
 elif page == "🗣️ Patient Chat":
     st.title("🧠 Patient Chat")
