@@ -1,13 +1,13 @@
 import streamlit as st
 import requests
 
-# WatsonX credentials (stored in Streamlit secrets)
+# ✅ WatsonX credentials from Streamlit secrets
 api_key = st.secrets["WATSONX_API_KEY"]
 project_id = st.secrets["WATSONX_PROJECT_ID"]
-model_id = "Granite-13b-instruct-v2"  
-region = "us-south"  # ✅ Your region (Dallas)
+region = "us-south"  # Change to your region if needed
+model_id = "granite-3b-instruct"  # Or granite-3.3b-instruct-v1
 
-# Get IAM token from IBM Cloud
+# ✅ Get IAM token from IBM
 @st.cache_resource
 def get_iam_token():
     url = "https://iam.cloud.ibm.com/identity/token"
@@ -16,25 +16,26 @@ def get_iam_token():
     response = requests.post(url, headers=headers, data=data)
     return response.json()["access_token"]
 
-# Query Granite model via WatsonX
+# ✅ Function to query Granite model via WatsonX
 def query_granite(prompt):
     token = get_iam_token()
-    url = f"https://{region}.ml.cloud.ibm.com/ml/v1/text-generation?version=2024-05-01"
+    url = f"https://{region}.ml.cloud.ibm.com/v2/inference"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
+
     payload = {
         "model_id": model_id,
-        "project_id": project_id,
-        "input": prompt,
+        "input": [{"role": "user", "content": prompt}],
         "parameters": {
             "decoding_method": "sample",
             "max_new_tokens": 300,
             "temperature": 0.7,
             "top_k": 50,
-            "top_p": 0.95
-        }
+            "top_p": 0.9
+        },
+        "project_id": project_id
     }
 
     response = requests.post(url, headers=headers, json=payload)
@@ -42,19 +43,25 @@ def query_granite(prompt):
     if response.status_code == 200:
         try:
             return response.json()["results"][0]["generated_text"]
-        except (KeyError, IndexError):
-            return "⚠️ Model responded, but no generated text was found."
+        except Exception as e:
+            return f"⚠️ Failed to parse model output: {str(e)}"
     else:
         return f"❌ Error: {response.status_code} - {response.text}"
 
-# Streamlit UI
+# ✅ Streamlit UI Setup
 st.set_page_config(page_title="HealthAI", page_icon="🩺", layout="centered")
 st.sidebar.title("🩺 HealthAI Navigation")
 page = st.sidebar.radio("Go to", ["🏠 Home", "🗣️ Patient Chat", "🔍 Disease Prediction", "💊 Treatment Plan"])
 
 if page == "🏠 Home":
     st.title("🏠 Welcome to HealthAI")
-    st.markdown("🔹 Ask medical questions\n🔹 Predict diseases\n🔹 Get treatment plans\n\nPowered by **IBM watsonx.ai + Granite**.")
+    st.markdown("""
+        🤖 Ask medical questions  
+        🧪 Predict conditions from symptoms  
+        💊 Get treatment plans  
+        ---
+        Powered by **IBM watsonx.ai + Granite**
+    """)
 
 elif page == "🗣️ Patient Chat":
     st.title("🧠 Patient Chat")
@@ -71,7 +78,8 @@ elif page == "🔍 Disease Prediction":
     if symptoms:
         with st.spinner("Analyzing..."):
             prompt = f"A patient reports: {symptoms}. Suggest possible conditions and actions."
-            st.success(query_granite(prompt))
+            reply = query_granite(prompt)
+            st.success(reply)
 
 elif page == "💊 Treatment Plan":
     st.title("💊 Treatment Planner")
@@ -79,4 +87,5 @@ elif page == "💊 Treatment Plan":
     if condition:
         with st.spinner("Generating plan..."):
             prompt = f"Provide a complete treatment plan for {condition}."
-            st.success(query_granite(prompt))
+            reply = query_granite(prompt)
+            st.success(reply)
